@@ -124,3 +124,9 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text="請使用指令：我要報名 / 取消報名 / 查詢我的報名 / 管理員查詢")
         )
+from reminder import remind_upcoming_events
+
+@app.route("/remind", methods=["GET"])
+def remind():
+    count = remind_upcoming_events()
+    return f"✅ Reminders sent: {count}"
