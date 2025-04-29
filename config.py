@@ -1,14 +1,16 @@
 # config.py
 
-# LINE Bot 金鑰
-CHANNEL_SECRET = "32b66b04ab78671cee9818afe6e1181c"
-CHANNEL_ACCESS_TOKEN = "H/ZkozFSaba/Y+elLuaOsFKQUgGminzMs/UC41L/RObnAAZs8dtJeSfNrbOrQqmzeoiJA7VTTm4ScBra714tJn29IxexgZth42cOGSIudku5xRTr3dKwBGDqAnOcdH0yD2rOZvveIpmHFQhXisQxdQdB04t89/1O/w1cDnyilFU="
+import os
 
-# 管理者 LINE 使用者 ID（限定可以查詢所有報名資料的人）
-ADMIN_USER_ID = "xandat999"
+# 從環境變數讀取 LINE 機器人金鑰
+CHANNEL_SECRET = os.environ.get("CHANNEL_SECRET")
+CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
 
-# Google Sheets 活動清單試算表 ID
-EVENTS_SPREADSHEET_ID = "1p2TbBLsHXFV3gOJD5fGt50ZKLlciRsP_3ry44PD-ibc"
+# 管理員 LINE ID
+ADMIN_USER_ID = os.environ.get("ADMIN_USER_ID")
 
-# Google API 服務帳戶 JSON 憑證檔案名稱
-GOOGLE_CREDENTIAL_FILE = "credentials.json"
+# Google Sheets 活動清單表格 ID
+EVENTS_SPREADSHEET_ID = os.environ.get("EVENTS_SPREADSHEET_ID")
+
+# credentials JSON 將在 sheets.py 處理
+GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON")
