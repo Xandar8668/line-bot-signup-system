@@ -1,3 +1,4 @@
+print("✅ credentials loaded:", config.GOOGLE_CREDENTIALS_JSON is not None)
 # sheets.py
 
 import json
