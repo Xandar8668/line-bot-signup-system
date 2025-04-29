@@ -1,7 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()  # 本地開發時才會讀 .env，在 Vercel 會自動讀系統變數
 
 CHANNEL_SECRET = os.environ.get("CHANNEL_SECRET")
 CHANNEL_ACCESS_TOKEN = os.environ.get("CHANNEL_ACCESS_TOKEN")
