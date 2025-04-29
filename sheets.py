@@ -1,73 +1,94 @@
-print("✅ credentials loaded:", config.GOOGLE_CREDENTIALS_JSON is not None)
-# sheets.py
-
+import config
 import json
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
-import config
+from datetime import datetime, timedelta
 
-# ✅ 用環境變數讀取 credentials JSON，建立連線
-service_account_info = json.loads(config.GOOGLE_CREDENTIALS_JSON)
-credentials = Credentials.from_service_account_info(service_account_info)
-gc = gspread.authorize(credentials)
+# 初始化 Google Sheets API
+def init_gspread_client():
+    credentials_info = json.loads(config.GOOGLE_CREDENTIALS_JSON)
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    credentials = Credentials.from_service_account_info(credentials_info, scopes=scopes)
+    client = gspread.authorize(credentials)
+    return client
 
-# ✅ 開啟活動清單主表（整年度活動清單）
-sh = gc.open_by_key(config.EVENTS_SPREADSHEET_ID)
-event_list_ws = sh.worksheet("活動清單")  # 預設名稱，請依實際調整
-
-# 讀取所有活動表名稱
-def get_event_sheet_names():
-    return [sheet.title for sheet in sh.worksheets() if sheet.title != "活動清單"]
-
-# 讀取活動清單資料（用來顯示目前有哪些活動可報名）
+# 取得活動清單
 def get_event_list():
-    data = event_list_ws.get_all_records()
-    return data  # 每筆是 dict：{"日期": ..., "時段": ..., "活動名稱": ...}
+    client = init_gspread_client()
+    sheet = client.open_by_key(config.EVENTS_SPREADSHEET_ID).sheet1  # 活動清單在第一個 sheet
 
-# 報名某活動（根據活動表格名稱）
-def add_signup(sheet_name, name, line_name, phone, number, note):
+    events = []
+    records = sheet.get_all_records()
+
+    for record in records:
+        if record.get("活動名稱") and record.get("日期") and record.get("時段"):
+            events.append({
+                "活動名稱": record["活動名稱"],
+                "日期": record["日期"],
+                "時段": record["時段"]
+            })
+    return events
+
+# 報名資料寫入
+def add_signup(sheet_name, name, user_id, phone, number, note):
     try:
-        ws = sh.worksheet(sheet_name)
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ws.append_row([now, name, line_name, phone, number, note])
+        client = init_gspread_client()
+        sheet = client.open(sheet_name).sheet1
+        sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), name, user_id, phone, number, note])
         return True
     except Exception as e:
-        print("報名錯誤：", e)
+        print(f"[add_signup] error: {e}")
         return False
 
-# 取消報名（根據 LINE 名稱 + 活動名稱搜尋）
+# 查詢使用者已報名活動
+def get_user_signups(user_id):
+    client = init_gspread_client()
+    spreadsheet = client.open_by_key(config.EVENTS_SPREADSHEET_ID)
+    sheet_names = [ws.title for ws in spreadsheet.worksheets()]
+
+    joined_events = []
+
+    for sheet_name in sheet_names:
+        try:
+            ws = spreadsheet.worksheet(sheet_name)
+            records = ws.get_all_records()
+            for record in records:
+                if str(record.get("user_id")) == str(user_id):
+                    joined_events.append(f"{sheet_name} - {record.get('name')}")
+        except Exception as e:
+            print(f"[get_user_signups] error on {sheet_name}: {e}")
+
+    return joined_events
+
+# 管理者查詢所有場次資料
+def get_admin_all_data():
+    client = init_gspread_client()
+    spreadsheet = client.open_by_key(config.EVENTS_SPREADSHEET_ID)
+    sheet_names = [ws.title for ws in spreadsheet.worksheets()]
+
+    all_data = {}
+
+    for sheet_name in sheet_names:
+        try:
+            ws = spreadsheet.worksheet(sheet_name)
+            records = ws.get_all_records()
+            all_data[sheet_name] = records
+        except Exception as e:
+            print(f"[get_admin_all_data] error on {sheet_name}: {e}")
+
+    return all_data
+
+# 取消報名
 def cancel_signup(sheet_name, line_name):
     try:
-        ws = sh.worksheet(sheet_name)
-        records = ws.get_all_records()
-        for i, row in enumerate(records):
-            if row.get("LINE名稱") == line_name:
-                ws.delete_rows(i + 2)  # 加2：因為有標題列 + index從0起
+        client = init_gspread_client()
+        sheet = client.open(sheet_name).sheet1
+        records = sheet.get_all_records()
+        for idx, record in enumerate(records):
+            if record.get("LINE名稱") == line_name:
+                sheet.delete_rows(idx + 2)  # 加2因為get_all_records略過表頭
                 return True
         return False
     except Exception as e:
-        print("取消報名錯誤：", e)
+        print(f"[cancel_signup] error: {e}")
         return False
-
-# 查詢使用者參加了哪些活動（根據 LINE 名稱）
-def get_user_signups(line_name):
-    joined = []
-    for ws in sh.worksheets():
-        if ws.title == "活動清單":
-            continue
-        records = ws.get_all_records()
-        for row in records:
-            if row.get("LINE名稱") == line_name:
-                joined.append(ws.title)
-    return joined
-
-# 管理者查詢所有報名資料（依照所有活動彙整）
-def get_admin_all_data():
-    all_data = {}
-    for ws in sh.worksheets():
-        if ws.title == "活動清單":
-            continue
-        records = ws.get_all_records()
-        all_data[ws.title] = records
-    return all_data
