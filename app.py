@@ -36,6 +36,17 @@ def callback():
 def index():
     return "✅ LINE Bot Flask Server is running!"
 
+# 健康檢查路由
+@app.route("/health", methods=["GET"])
+def health_check():
+    try:
+        from sheets import init_gspread_client
+        client = init_gspread_client()
+        return "✅ Health check passed! Google Sheets connected successfully."
+    except Exception as e:
+        return f"❌ Health check failed: {e}"
+
+
 # 處理文字訊息
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
